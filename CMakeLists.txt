@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.2)
 
 project(Particle-Life)
 
-add_executable(${PROJECT_NAME} ./src/main.cpp src/shader.cpp ./deps/glad.c) 
+add_executable(${PROJECT_NAME} ./src/main.cpp ./src/particle.cpp ./deps/glad.c) 
 
 target_include_directories(${PROJECT_NAME} PUBLIC ./src/include ./deps/include/)
 

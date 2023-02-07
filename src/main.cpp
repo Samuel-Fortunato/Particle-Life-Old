@@ -2,39 +2,21 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "shader.h"
+#include "particle.h"
+
+#define WINDOW_WIDTH 720
+#define WINDOW_HEIGHT 480
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void set_viewport(int width, int height);
 
-float vertices[] = {
-	0.0, 0.0, 0.0,
-	1.0, 0.0, 0.0,
-	0.924, 0.383, 0.0,
-	0.707, 0.707, 0.0,
-	0.383, 0.924, 0.0,
-	0.0, 1.0, 0.0,
-	-0.383, 0.924, 0.0,
-	-0.707, 0.707, 0.0,
-	-0.924, 0.383, 0.0,
-	-1.0, 0.0, 0.0,
-	-0.924, -0.383, 0.0,
-	-0.707, -0.707, 0.0,
-	-0.383, -0.942, 0.0,
-	0.0, -1.0, 0.0,
-	0.383, -0.924, 0.0,
-	0.707, -0.707, 0.0,
-	0.942, -0.383, 0.0,
-	1.0, 0.0, 0.0
-};
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-" gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
+float delta_time = 0.0f;
+float last_frame = 0.0f;
 
 int main()
 {
@@ -43,7 +25,9 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(800, 600, "Particle-Life", NULL, NULL);
+	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+
+	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Particle-Life", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -58,30 +42,29 @@ int main()
 		return -1;
 	}
 
-	glViewport(0, 0, 800, 600);
+	set_viewport(WINDOW_WIDTH, WINDOW_HEIGHT);
+	
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetKeyCallback(window, key_callback);
 	
 	Shader myShader = Shader("resources/shader.vert", "resources/shader.frag");
 
-	unsigned int VBO, VAO;
-	glGenBuffers(1, &VBO);
-	glGenVertexArrays(1, &VAO);
+	Particle myParticle(glm::vec2(0.0f), glm::vec2(1.0f), glm::vec3(1.0f));
 
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	myShader.use();
+	myShader.setMat4("projection", glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f));
 
 	while (!glfwWindowShouldClose(window))
 	{		
+		float current_frame = glfwGetTime();
+		delta_time = current_frame - last_frame;
+		last_frame = current_frame;
+		
 		glClearColor(0.2, 0.3, 0.3, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
-		myShader.use();
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 18);
+		myParticle.update(delta_time);
+		myParticle.draw(myShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -93,7 +76,7 @@ int main()
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	glViewport(0, 0, width, height);
+	set_viewport(width, height);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -110,4 +93,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			glfwSetWindowMonitor(window, NULL, 0, 0, 720, 480, GLFW_DONT_CARE);
 		}
 	}
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	}
+}
+
+void set_viewport(int width, int height)
+{
+	if (width > height)
+		glViewport((width - height) / 2, 0, height, height);
+	else
+		glViewport(0, (height - width) / 2, width, width);
 }
